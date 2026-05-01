@@ -8,9 +8,9 @@ by Themida.
 
 The Repo contains:
 
-    - SystemBC it self full decompilation of the sample by the hash above
+    - SystemBC it self full decompilation of the sample by the hash above.
 
-    - SystemBC-Lib just a simple api with an example to do proxy communications via SystemBC protocol
+    - SystemBC-Emu: C2 Emulator, just a simple example how SystemBC protocol can be used.
     
     - ThemidaAPILocator: x64dbg to resolve APIs.
 
