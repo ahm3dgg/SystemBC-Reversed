@@ -7,8 +7,11 @@ me in Code Reconstruction, C2 Emulation and Deobfuscation since also this sample
 by Themida.
 
 The Repo contains:
+
     - SystemBC it self full decompilation of the sample by the hash above
-    - SystemBC-Lib just a simple api to do proxy communications via SystemBC protocol
+
+    - SystemBC-Lib just a simple api with an example to do proxy communications via SystemBC protocol
+    
     - ThemidaAPILocator: x64dbg to resolve APIs.
 
 The obfuscation was actually simple, the api's are dynamically allocated and these regions contains
