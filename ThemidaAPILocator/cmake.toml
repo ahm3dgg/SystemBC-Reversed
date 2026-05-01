@@ -1,0 +1,26 @@
+[cmake]
+version = "3.15"
+cmkr-include = "cmake/cmkr.cmake"
+
+[project]
+name = "ThemidaAPIResolver"
+include-before = [
+	"cmake/msvc-static-runtime.cmake",
+	"cmake/msvc-configurations.cmake",
+]
+
+[fetch-content.x64dbg]
+url = "https://sourceforge.net/projects/x64dbg/files/snapshots/snapshot_2025-08-19_19-40.zip/download"
+sha1 = "59aceebe442319400e38fa651ceac8df507d9d93"
+include-after = ["cmake/x64dbg.cmake"]
+
+[template.plugin]
+type = "shared"
+add-function = "x64dbg_plugin"
+
+[target.ThemidaAPIResolver]
+type = "plugin"
+sources = [
+    "src/*.cpp",
+    "src/*.h",
+]
