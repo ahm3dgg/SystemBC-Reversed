@@ -377,7 +377,7 @@ connid_t systembc_new_connection(systembc_context_t& systembc_context, const cha
 	systembc_crypto(g_xor_key, sizeof g_xor_key, (uint8_t*)buf, 3);
 	systembc_crypto(g_xor_key, sizeof g_xor_key, (uint8_t*)buf + 3, 10);
 
-	if (!memcmp(buf, connection_confirmation_packet, sizeof(connection_confirmation_packet)) == 0)
+	if (memcmp(buf, connection_confirmation_packet, sizeof(connection_confirmation_packet)) != 0)
 	{
 		printf("Failed to connect to %s:%d\n", host, port);
 		--connection_id;

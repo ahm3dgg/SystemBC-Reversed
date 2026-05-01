@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SystemBC-Lib.cpp">
+    <ClCompile Include="SystemBC-Emu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

