@@ -8,11 +8,13 @@ by Themida.
 
 The Repo contains:
 
-    - SystemBC it self full decompilation of the sample by the hash above.
+  - Payload: Decompiled Payload which has 2 main features it offers proxying connections can be of type IPv4 and IPv6 
+    but all over TCP it also offers and downloading files over http/tls and starts them as a scheduled task.
 
-    - SystemBC-Emu: C2 Emulator just a Simple programmatic example on how the SystemBC Protocol can be used to proxy communication, its tested on `TestServer`, which is just a simple tcp echo server, but it doesn't show file downloads
+  - SystemBC-Emu: C2 Emulator just a Simple programmatic example on how the SystemBC Protocol can be used to proxy communication, 
+    its tested on `TestServer`, which is just a simple tcp echo server, but it doesn't show file downloads
     
-    - ThemidaAPILocator: x64dbg to resolve APIs.
+  - ThemidaAPILocator: My bad solution to resolving Themida protected APIs via x64dbg sdk
 
 The obfuscation was actually simple, the api's are dynamically allocated and these regions contains
 code that has bunch of junk, jumps and calls, until you reach the api, my solution was to simply follow
