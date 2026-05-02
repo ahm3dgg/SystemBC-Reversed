@@ -1782,7 +1782,7 @@ int cmd_argument_exists(const char *arg)
 	return 0;
 }
 
-BOOL WINAPI agent_remove_artifacts(HWND hwnd, LPARAM lParam)
+BOOL WINAPI agent_kill_existing_agent(HWND hwnd, LPARAM lParam)
 {
 	DWORD pid = {};
 	char buffer[256] = {0};
@@ -1936,7 +1936,7 @@ int main()
 
 	else
 	{
-		EnumWindows(agent_remove_artifacts, 0);
+		EnumWindows(agent_kill_existing_agent, 0);
 		// Sleep(SECONDS(10));
 
 		// Low Integrity Process like Browsers, unsure if what was the use ?
